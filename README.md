@@ -1,8 +1,8 @@
 # 2023_PNU_SmartBoat
 
-Team Leader: \n
+Team Leader:  
   Lee HeeGeun
-
-Team Members: \n
+  
+Team Members:  
   Eom SungMin
   
