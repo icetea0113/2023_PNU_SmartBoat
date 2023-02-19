@@ -12,14 +12,13 @@ This project is licensed under the terms of the GNU General Public License v3.0.
 2. [Installation and Usage](#installation-and-usage) (설치 및 사용)
 3. [License](#license) (라이선스) -->
 ### Team Leader:
-
-   Lee Hee Geun
+Lee Hee Geun
   
 ### Team Members:
-   1. Eom Sung Min  
-   2. Yang Dong Heon  
-   3. Lee Hyun Bin  
-   4. Park Yung In  
+1. Eom Sung Min  
+2. Yang Dong Heon  
+3. Lee Hyun Bin  
+4. Park Yung In  
 
 
 <!-- ## Documentation and Open Data
