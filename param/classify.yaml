@@ -1,7 +1,10 @@
 /classify_node:
   ros__parameters:
     # group으로 묶기위한 최소 점의 갯수
-    grouping_threshold: 3.0
+    grouping_threshold: 5.0
 
-    # 한 그룹으로 묶을 포인트 간 거리(x0.1 meter)
-    max_gap_in_set : 1
+    # 한 그룹으로 묶을 포인트 간 거리(x 1 meter)
+    max_gap_in_set : 0.1
+
+    # 안전 거리(x 1 meter)
+    safety_distance : 30

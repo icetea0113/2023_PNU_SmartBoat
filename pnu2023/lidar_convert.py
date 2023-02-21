@@ -40,9 +40,15 @@ class Classify(Node):
                 Parameter("max_gap_in_group", Parameter.Type.DOUBLE, 1.0),
             ).get_parameter_value().double_value
         )
-        
+        self.safety_distance = (
+            self.get_parameter_or(
+                "safety_distance",
+                Parameter("safety_distance", Parameter.Type.DOUBLE, 1.0),
+            ).get_parameter_value().double_value
+        )
         self.get_logger().info("max_gap_in_group: %s" % (self.max_gap_in_group))
         self.get_logger().info("grouping_threshold: %s" % (self.grouping_threshold))
+        self.get_logger().info("safety_distance: %s" % (self.safety_distance))
         
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
@@ -82,13 +88,14 @@ class Classify(Node):
     def cosines(self,a,b):
         return math.sqrt(math.pow(a,2)+math.pow(b,2)-2*a*b*math.cos(self.d_theta))
     
+    def cosines(self,a,b,theta):
+        return math.sqrt(math.pow(a,2)+math.pow(b,2)-2*a*b*math.cos(theta))
+
+    
     def trans_polar_to_ortho(self, rho, theta):
         x = rho * math.cos(theta)
         y = rho * math.sin(theta)
         return (x, y)
-    
-    def radian_to_degree(self, rad):
-        return rad * 180 / math.pi
     
     def grouping(self): #step b
         self.get_logger().info("starting 1st grouping process")
@@ -121,12 +128,12 @@ class Classify(Node):
                 (x3, y3) = self.trans_polar_to_ortho(group[index][0], group[index][1])
                 
                 if group[index-2] not in temp_group:
-                    temp_group.append(group[index-2])
-                    temp_group.append(group[index-1])
+                    temp_group.append(group[index-2], (x1, y1))
+                    temp_group.append(group[index-1], (x2, y2))
                     
-                degree = self.radian_to_degree(abs(math.atan2((y1-y2)/(x1-x2)) - math.atan2((y3-y2)/(x3-x2))))
+                degree = math.degrees(abs(math.atan2((y1-y2)/(x1-x2)) - math.atan2((y3-y2)/(x3-x2))))
                 if degree <= 15:
-                    temp_group.append(group[index])
+                    temp_group.append(group[index], (x3, y3))
                 else:
                     distance = self.cosines(temp_group[0][0],temp_group[-1][0])
                     if distance >= 1:
@@ -136,7 +143,31 @@ class Classify(Node):
                     index += 2
                     
     def expand_obstacle(self): #step e
-        pass
+        for group in self.obstacle:
+            obstacle_rho_rad = group[0]
+            obstacle_x_y = group[1]
+            
+            start_point_polar = obstacle_rho_rad[0]
+            end_point_polar = obstacle_rho_rad[-1]
+            start_point_otho = obstacle_x_y[0]
+            end_point_otho = obstacle_x_y[-1]
+            middle_point = [(start_point_otho[0]+end_point_otho[0])/2 , (start_point_otho[1]+end_point_otho[1])/2]
+            
+            dist_p2p = self.cosines(start_point_polar[0], end_point_polar[0], (end_point_polar[1]-start_point_polar[1]))
+            radius = dist_p2p/2.0 + self.safety_distance
+            p2p_angle = math.atan2((end_point_otho[1]-start_point_otho[1])/(end_point_otho[0]-start_point_otho[0]))
+            
+            height = radius * math.sin(p2p_angle)
+            width = radius * math.cos(p2p_angle)
+            
+            expand_1 = (middle_point[0]+width, middle_point[1]+height)
+            expand_2 = (middle_point[0]-width, middle_point[0]-height)
+            expand_1_angle = math.degrees(math.atan(expand_1[1]/expand_1[0]))
+            expand_2_angle = math.degrees(math.atan(expand_2[1]/expand_2[0]))
+            
+            for i in range(len(self.key_angle)):
+                if min(expand_1_angle, expand_2_angle) < self.key_angle[i] < max(expand_1_angle, expand_2_angle):
+                    del self.key_angle[i]
     
     def expand_wall(self): # step h
         pass
