@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from rclpy.parameter import Parameter
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, Bool
 import math
 import numpy as np
 from numpy.polynomial import Polynomial
@@ -54,6 +54,10 @@ class Classify(Node):
             reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
             history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
             depth=1,
+        )
+        
+        self.emo = self.create_subscription(
+            Bool, "/emo_event", self.listener_callback, qos_profile
         )
         
         self.scan_subscription = self.create_subscription(

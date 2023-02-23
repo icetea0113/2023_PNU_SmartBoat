@@ -27,7 +27,8 @@ setup(
     entry_points={
         'console_scripts': [
             'lidar_convert = pnu2023.lidar_convert:main',
-            'HeadingAngle = pnu2023.heading_mag:main'
+            'HeadingAngle = pnu2023.heading_mag:main',
+            'mechaship_teleop_joystick = pnu2023.joystick:main',
         ],
     },
 )
