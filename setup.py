@@ -26,7 +26,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'lidar_convert = pnu2023.lidar_convert:main'
+            'lidar_convert = pnu2023.lidar_convert:main',
+            'HeadingAngle = pnu2023.heading_mag:main'
         ],
     },
 )

@@ -141,6 +141,9 @@ class Classify(Node):
                     else :
                         self.obstacle.append(temp_group)
                     index += 2
+        
+        self.get_logger().info("count of obstacle : %s. " % (len(self.obstacle)))
+        self.get_logger().info("count of wall : %s." % (len(self.wall)))
                     
     def expand_obstacle(self): #step e
         for group in self.obstacle:
@@ -149,6 +152,7 @@ class Classify(Node):
             
             start_point_polar = obstacle_rho_rad[0]
             end_point_polar = obstacle_rho_rad[-1]
+            
             start_point_otho = obstacle_x_y[0]
             end_point_otho = obstacle_x_y[-1]
             middle_point = [(start_point_otho[0]+end_point_otho[0])/2 , (start_point_otho[1]+end_point_otho[1])/2]
@@ -161,7 +165,7 @@ class Classify(Node):
             width = radius * math.cos(p2p_angle)
             
             expand_1 = (middle_point[0]+width, middle_point[1]+height)
-            expand_2 = (middle_point[0]-width, middle_point[0]-height)
+            expand_2 = (middle_point[0]-width, middle_point[1]-height)
             expand_1_angle = math.degrees(math.atan(expand_1[1]/expand_1[0]))
             expand_2_angle = math.degrees(math.atan(expand_2[1]/expand_2[0]))
             
@@ -170,11 +174,24 @@ class Classify(Node):
                     del self.key_angle[i]
     
     def expand_wall(self): # step h
-        pass
-    
+        min_wall = self.wall[0]
+        for wall in self.wall:
+            if min_wall[0] > wall[0]:
+                min_wall = wall
+                
+        for idx in range(len(self.wall)):
+            expand_dist = self.safety_distance / math.cos(self.wall[idx][1] - min_wall[1])
+            self.wall[idx][0] -= expand_dist
+            if self.wall[idx][0] < 0:
+                self.wall[idx] = 0
+
     def detect_angle(self): #step f~g
-        pass
-                    
+        '''
+        heading 목표 방향을 수신한 뒤, key_angle과 가장 가까운 각도로 주행하도록 함.
+        &&(And) 벽과의 최소거리가 0이 넘어야 주행이 가능함.
+                                
+        '''
+        self.key_angle
             
 
 def main(args=None):

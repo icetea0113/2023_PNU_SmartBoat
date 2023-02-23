@@ -6,12 +6,14 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from sensor_msgs.msg import MagneticField
+from std_msgs.msg import Float64
+
 import math
 
 from std_msgs.msg import Float64
 
 
-class HeadingAngle:
+class HeadingAngle(Node):
     
     def __init__(self):
         super().__init__("heading_mag")
@@ -25,22 +27,26 @@ class HeadingAngle:
         self.subscription  # prevent unused variable warning
         
         self.heading_publisher = self.create_publisher(Float64, 'heading', qos_profile)
-
+        
         
         self.magnetic_x = 0.0
         self.magnetic_y = 0.0
-        self.magnetic_z = 0.0
+        self.magnetic_z = 0.0  
+        self.temp_heading_angle = 0.0
         self.last_heading_angle = 0.0
-        
+        self.get_logger().info("start_ init")
         
     def magnetic_callback(self, magnetic):
         self.magnetic_x = magnetic.magnetic_field.x
         self.magnetic_y = magnetic.magnetic_field.y
         self.magnetic_z = magnetic.magnetic_field.z
+        self.last_heading_angle = self.calculate_heading_angle()
+        msg = Float64()
+        msg.data = self.last_heading_angle
+        self.get_logger().info("%s\n"% round(msg.data, 2))
+        self.heading_publisher.publish(msg)
         
-    
-
-
+        
     def getRotationMatrix(self, R, I, gravity, geomagnetic):
         Ax = gravity[0]
         Ay = gravity[1]
@@ -178,12 +184,9 @@ class HeadingAngle:
         if success is True:
             self.getOrientation(R, orientation)
             heading_angle = orientation[0] * 180 / math.pi
-            self.last_heading_angle = heading_angle
+            self.temp_heading_angle = heading_angle
         else:
-            heading_angle = self.last_heading_angle
-            
-        self.heading_publisher.publish(round(heading_angle, 2))
-        self.get_logger().info("%s\n"% round(heading_angle, 2))
+            heading_angle = self.temp_heading_angle
         return heading_angle
 
 
@@ -196,7 +199,6 @@ def main(args=None):
     #heading.heading_publisher.publish(angle)
     heading.destroy_node()
     rclpy.shutdown()
-    
     #rate = rospy.Rate(10)  # 10 Hz
 
 
