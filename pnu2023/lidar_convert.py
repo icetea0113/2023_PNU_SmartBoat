@@ -7,6 +7,7 @@ import math
 import numpy as np
 from numpy.polynomial import Polynomial
 from mechaship_interfaces.msg import Classification, ClassificationArray
+from mechaship_interfaces.srv import Key, ThrottlePercentage, RGBColor
 
 '''
 import os
@@ -59,7 +60,21 @@ class Classify(Node):
         self.scan_subscription = self.create_subscription(
             LaserScan, "/scan", self.listener_callback, qos_profile
         )
+
+        self.create_timer(0.1, self.navigate)
+
+        self.set_key_handler = self.create_client(Key, "/actuators/key/set")
+        self.set_throttle_handler = self.create_client(
+            ThrottlePercentage, "/actuators/throttle/set_percentage"
+        )
         
+        
+    def listener_callback(self, data):
+        self.rhos = []
+        self.thetas = []
+        self.angle = 0
+        self.d_theta = 0
+
         # these list use for step a ~ step c and consist of (rho, angle)
         self.group_1 = []
         self.obstacle = []
@@ -77,13 +92,6 @@ class Classify(Node):
         # 다음 변수는 최종 서보모터로 입력을 넣어줄 키 각도이다.
         self.final_key_angle = 90
         
-        
-    def listener_callback(self, data):
-        self.rhos = []
-        self.thetas = []
-        self.angle = 0
-        self.d_theta = 0
-        
         #---------------------------------------------------#
         self.angle = data.angle_min
         self.d_theta = data.angle_increment
@@ -92,7 +100,6 @@ class Classify(Node):
                 self.rhos.append(scan_data)
                 self.thetas.append(self.angle)
             self.angle += self.d_theta
-        
 
         self.grouping()
         self.decision_group()
@@ -216,7 +223,12 @@ class Classify(Node):
         '''
         self.get_logger().info("starting detect angle process")
         self.key_angle
-            
+    
+    def navigate(self):
+        key = Key.Request()
+        key = self.final_key_angle
+
+        self.set_key_handler.call_async(key)
 
 def main(args=None):
     rclpy.init(args=args)
