@@ -203,7 +203,8 @@ class Classify(Node):
                         temp_group.clear()
                     index += 2
         
-        #------ 위 함수 수정 요함 (재검토) (검토날짜 : 2022_02_24(Fri) _ 16:28)
+        #------ 위 함수 수정 요함 (비정상) (검토날짜 : 2022_02_24(Fri) _ 16:28)
+        #------ 2023_02_25(SAT) _ 22:34 수정 완료 / 추후 재검토 예정
         self.obstacle_publisher.publish(self.obstacle)
         self.wall_publisher.publish(self.walls)
         self.get_logger().info("count of obstacle : %s. " % (len(self.obstacle)))
