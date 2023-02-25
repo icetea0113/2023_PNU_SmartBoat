@@ -32,7 +32,7 @@ class Classify(Node):
         self.grouping_threshold = (
             self.get_parameter_or(
                 "grouping_threshold",
-                Parameter("grouping_threshold", Parameter.Type.DOUBLE, 9.0),
+                Parameter("grouping_threshold", Parameter.Type.DOUBLE, 5.0),
             ).get_parameter_value().double_value
         )
         self.max_gap_in_group = (
@@ -67,9 +67,6 @@ class Classify(Node):
         self.set_throttle_handler = self.create_client(
             ThrottlePercentage, "/actuators/throttle/set_percentage"
         )
-        
-        
-    def listener_callback(self, data):
         self.rhos = []
         self.thetas = []
         self.angle = 0
@@ -92,6 +89,14 @@ class Classify(Node):
         # 다음 변수는 최종 서보모터로 입력을 넣어줄 키 각도이다.
         self.final_key_angle = 90
         
+        
+    def listener_callback(self, data):
+        
+        self.rhos = []
+        self.thetas = []
+        self.angle = 0
+        self.d_theta = 0
+        
         #---------------------------------------------------#
         self.angle = data.angle_min
         self.d_theta = data.angle_increment
@@ -101,6 +106,24 @@ class Classify(Node):
                 self.thetas.append(self.angle)
             self.angle += self.d_theta
 
+    
+        # these list use for step a ~ step c and consist of (rho, angle)
+        self.group_1 = []
+        self.obstacle = []
+        self.wall = []
+        self.key_angle = [5 * angle for angle in range(0,37)]
+        
+        '''
+        다음 변수들은 subscription을 만들어야함.
+        1. 목표지점을 향한 각도 (GPS + IMU)
+        2. 현재 선수 각도 (IMU)
+        '''
+        self.now_heading = 0
+        self.target_heading = 0
+        
+        # 다음 변수는 최종 서보모터로 입력을 넣어줄 키 각도이다.
+        self.final_key_angle = 90
+        
         self.grouping()
         self.decision_group()
         self.expand_obstacle()
@@ -133,22 +156,23 @@ class Classify(Node):
             if dist_p_to_p <= self.max_gap_in_group :
                 sub_group.append((b, b_theta))
             elif len(sub_group) >= self.grouping_threshold :
-                self.group_1.append(sub_group)
+                self.group_1.append(sub_group.copy())
                 sub_group.clear()
                 index += 1
             else :
                 sub_group.clear()
                 index += 1
-        for group in self.group_1:
-            print(group[0])
-        print("end - 1st group")
-        # ----- 여기까지 검토 완료 (비정상) (검토날짜 : 2023_02_24(Fri) _ 15:50)
+        # ----- 여기까지 검토 완료 (정상) (검토날짜 : 2023_02_25(SAT) _ 15:30)
+        # python의 call by assignment 개념 부족으로 인한 실수 발생
         # group_1 -> tuple 형태로 (거리, 각도)로 들어가 있음.
-        # group_1 에 똑같은 sub_group들이 들어가는 현상 발생
     
     def decision_group(self): #step c ~ step d
+        self.get_logger().info("세분화 전 인식한 그룹의 갯수 : %s." % (len(self.group_1)))
+        i = 0
         for group in self.group_1:
             temp_group = []
+            j = 0
+            i += 1
             for index in range(2,len(group)):
                 (x1, y1) = self.trans_polar_to_ortho(group[index-2][0], group[index-2][1])
                 (x2, y2) = self.trans_polar_to_ortho(group[index-1][0], group[index-1][1])
@@ -158,17 +182,23 @@ class Classify(Node):
                     temp_group.append(group[index-2])
                     temp_group.append(group[index-1]) 
                     
-                degree = math.degrees(abs(math.atan2((y1-y2),(x1-x2)) - math.atan2((y3-y2),(x3-x2))))
-                if degree <= 20 or degree >= 160:
+                degree = math.degrees(abs(abs(math.atan((y2-y1)/(x2-x1))) - abs(math.atan((y3-y2)/(x3-x2)))))
+                j += 1
+                print("{}번째 그룹의 {}요소에서의 각도 : {}".format(i,j,degree))
+                if degree <= 20:
                     temp_group.append(group[index])
-                else:
+                elif 20 < degree or index == len(group)-1:
                     distance = self.cosines(temp_group[0][0],temp_group[-1][0],temp_group[0][1]-temp_group[-1][1])
                     if distance >= 1:
-                        self.wall.append(temp_group)
+                        print("벽 전체 거리: %s"%distance)
+                        self.wall.append(temp_group.copy())
+                        temp_group.clear()
                     else :
-                        self.obstacle.append(temp_group)
+                        print("장애물 전체 거리: %s"%distance)
+                        self.obstacle.append(temp_group.copy())
+                        temp_group.clear()
                     index += 2
-                
+        
         #------ 위 함수 수정 요함 (재검토) (검토날짜 : 2022_02_24(Fri) _ 16:28)
         # 비정상적으로 obstacle을 쪼개는 현상 발생. 수정 요함
         self.get_logger().info("count of obstacle : %s. " % (len(self.obstacle)))
@@ -186,7 +216,7 @@ class Classify(Node):
                 
                 dist_p2p = self.cosines(start_point_polar[0], end_point_polar[0], (end_point_polar[1]-start_point_polar[1]))
                 radius = dist_p2p/2.0 + self.safety_distance
-                p2p_angle = math.atan2((end_point_otho[1]-start_point_otho[1]),(end_point_otho[0]-start_point_otho[0]))
+                p2p_angle = math.atan((end_point_otho[1]-start_point_otho[1])/(end_point_otho[0]-start_point_otho[0]))
                 
                 height = radius * math.sin(p2p_angle)
                 width = radius * math.cos(p2p_angle)
@@ -196,7 +226,7 @@ class Classify(Node):
                 expand_1_angle = math.degrees(math.atan(expand_1[1]/expand_1[0]))
                 expand_2_angle = math.degrees(math.atan(expand_2[1]/expand_2[0]))
                 
-                key_angle = self.key_angle
+                key_angle = self.key_angle.copy()
                 
                 for angle in self.key_angle:
                     if min(expand_1_angle, expand_2_angle) < angle < max(expand_1_angle, expand_2_angle):
@@ -206,7 +236,7 @@ class Classify(Node):
     
     def expand_wall(self): # step h
         if len(self.wall) > 0 :
-            min_wall = self.wall[0]
+            min_wall = self.wall[0].copy()
             for wall in self.wall:
                 if min_wall[0] > wall[0]:
                     min_wall = wall
@@ -228,7 +258,8 @@ class Classify(Node):
         key = Key.Request()
         key = self.final_key_angle
 
-        self.set_key_handler.call_async(key)
+        # self.set_key_handler.call_async(key)
+        # print(key)
 
 def main(args=None):
     rclpy.init(args=args)
