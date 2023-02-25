@@ -1,0 +1,6 @@
+/mechaship_classify_sub_node:
+  ros__parameters:
+    ##### 시각화 관련 매개변수 #####
+    map_size: 100    # map 픽셀 크기
+    turn_degree: 270 # map 회전 각도 (0~360)
+    map_scale: 100   # map 배율 (1~)

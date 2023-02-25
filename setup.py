@@ -29,6 +29,7 @@ setup(
             'lidar_convert = pnu2023.lidar_convert:main',
             'HeadingAngle = pnu2023.heading_mag:main',
             'mechaship_teleop_joystick = pnu2023.joystick:main',
+            'mechaship_classify_sub_node = pnu2023.mechaship_classify_sub_node:main',
         ],
     },
 )

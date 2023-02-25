@@ -67,6 +67,13 @@ class Classify(Node):
         self.set_throttle_handler = self.create_client(
             ThrottlePercentage, "/actuators/throttle/set_percentage"
         )
+        self.obstacle_publisher = self.create_publisher(
+            ClassificationArray, "Obstacle", qos_profile
+        )
+        self.wall_publisher = self.create_publisher(
+            ClassificationArray, "Wall", qos_profile
+        )
+
         self.rhos = []
         self.thetas = []
         self.angle = 0
@@ -136,7 +143,6 @@ class Classify(Node):
         # self.get_logger().info("starting 코사인법칙_2 process")
         return math.sqrt(math.pow(a,2)+math.pow(b,2)-2*a*b*math.cos(theta))
 
-    
     def trans_polar_to_ortho(self, rho, theta):
         # self.get_logger().info("starting 좌표계 변환 process")
         x = rho * math.cos(theta)
@@ -201,6 +207,8 @@ class Classify(Node):
         
         #------ 위 함수 수정 요함 (재검토) (검토날짜 : 2022_02_24(Fri) _ 16:28)
         # 비정상적으로 obstacle을 쪼개는 현상 발생. 수정 요함
+        self.obstacle_publisher.publish(self.obstacle)
+        self.wall_publisher.publish(self.walls)
         self.get_logger().info("count of obstacle : %s. " % (len(self.obstacle)))
         self.get_logger().info("count of wall : %s." % (len(self.wall)))
                     
