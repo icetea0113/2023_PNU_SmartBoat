@@ -178,7 +178,6 @@ class Classify(Node):
         for group in self.group_1:
             temp_group = []
             j = 0
-            i += 1
             for index in range(2,len(group)):
                 (x1, y1) = self.trans_polar_to_ortho(group[index-2][0], group[index-2][1])
                 (x2, y2) = self.trans_polar_to_ortho(group[index-1][0], group[index-1][1])
@@ -189,11 +188,10 @@ class Classify(Node):
                     temp_group.append(group[index-1]) 
                     
                 degree = math.degrees(abs(abs(math.atan((y2-y1)/(x2-x1))) - abs(math.atan((y3-y2)/(x3-x2)))))
-                j += 1
-                print("{}번째 그룹의 {}요소에서의 각도 : {}".format(i,j,degree))
+                print("{}번째 그룹, index = {}에서의 각도 : {}".format(i,index,degree))
                 if degree <= 20:
                     temp_group.append(group[index])
-                elif 20 < degree or index == len(group)-1:
+                elif (20 < degree or index == len(group)-1) and len(temp_group) > self.grouping_threshold:
                     distance = self.cosines(temp_group[0][0],temp_group[-1][0],temp_group[0][1]-temp_group[-1][1])
                     if distance >= 1:
                         print("벽 전체 거리: %s"%distance)
@@ -206,7 +204,6 @@ class Classify(Node):
                     index += 2
         
         #------ 위 함수 수정 요함 (재검토) (검토날짜 : 2022_02_24(Fri) _ 16:28)
-        # 비정상적으로 obstacle을 쪼개는 현상 발생. 수정 요함
         self.obstacle_publisher.publish(self.obstacle)
         self.wall_publisher.publish(self.walls)
         self.get_logger().info("count of obstacle : %s. " % (len(self.obstacle)))
