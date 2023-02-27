@@ -47,6 +47,12 @@ class Classify(Node):
                 Parameter("safety_distance", Parameter.Type.DOUBLE, 1.0),
             ).get_parameter_value().double_value
         )
+        self.grouping_angle_threshold = (
+            self.get_parameter_or(
+                "grouping_angle_threshold",
+                Parameter("grouping_angle_threshold", Parameter.Type.DOUBLE, 30),
+            ).get_parameter_value().double_value
+        )
         self.get_logger().info("max_gap_in_group: %sm" % (self.max_gap_in_group))
         self.get_logger().info("grouping_threshold: %s개" % (self.grouping_threshold))
         self.get_logger().info("safety_distance: %sm" % (self.safety_distance))
@@ -122,8 +128,8 @@ class Classify(Node):
         
         '''
         다음 변수들은 subscription을 만들어야함.
-        1. 목표지점을 향한 각도 (GPS + IMU)
-        2. 현재 선수 각도 (IMU)
+        1. 현재 선수 각도 (IMU)
+        2. 목표지점을 향한 각도 (GPS + IMU)
         '''
         self.now_heading = 0
         self.target_heading = 0
@@ -190,13 +196,11 @@ class Classify(Node):
                     temp_group.append(group[index-1]) 
                     
                 degree = math.degrees(abs(abs(math.atan((y2-y1)/(x2-x1))) - abs(math.atan((y3-y2)/(x3-x2)))))
-                print("{}번째 그룹, index = {}에서의 각도 : {}".format(i,index,degree))
-                if degree <= 30:
+                if degree <= self.grouping_angle_threshold:
                     temp_group.append(group[index])
-                elif (20 < degree or index == len(group)-1) and len(temp_group) > self.grouping_threshold:
+                elif (self.grouping_angle_threshold < degree or index == len(group)-1) and len(temp_group) > self.grouping_threshold:
                     distance = self.cosines(temp_group[0][0],temp_group[-1][0],temp_group[0][1]-temp_group[-1][1])
                     if distance >= 1:
-                        print("벽 전체 거리: %s"%distance)
                         self.wall.append(temp_group.copy())
                         for wall in temp_group :
                             coords = Classification()
@@ -205,7 +209,6 @@ class Classify(Node):
                             wall_pub.classifications.append(coords)
                         temp_group.clear()
                     else :
-                        print("장애물 전체 거리: %s"%distance)
                         self.obstacle.append(temp_group.copy())
                         for obstacle in temp_group:
                             coords = Classification()
@@ -215,7 +218,7 @@ class Classify(Node):
                         temp_group.clear()
                     index += 2
         
-        #------ 위 함수 수정 요함 (정상) (검토날짜 : 2022_02_27(Mon) _ 16:03)
+        #------ 여기까지 검토 완료 (정상) (검토날짜 : 2022_02_27(Mon) _ 16:03)
         # ||||||||||||||||||||||||||        !!!!!아래 사항 꼭 확인!!!!!     ||||||||||||||||||||||||||
         #------ 벽과 장애물에 대한 구분을 약간 러프하게 잡을 필요 있음 -> 추후 수조가 완성된 후, 재검토 할 예정
             
@@ -266,20 +269,42 @@ class Classify(Node):
                 if self.wall[idx][0][0] < expand_dist :
                     print("주변에 벽이 있어요!!")
                     #추가적인 제어 코드 설정
+                    
 
     def detect_angle(self): #step f~g
         '''
         heading 목표 방향을 수신한 뒤, key_angle과 가장 가까운 각도로 주행하도록 함.
         &&(And) 벽과의 최소거리가 0이 넘어야 주행이 가능함.
         '''
-        self.get_logger().info("starting detect angle process")
-        self.key_angle
-    
+        abs_key_angle = [5 * angle for angle in range(1,37)]
+        angle = abs_key_angle.copy()
+        for idx in range(len(abs_key_angle)):
+            abs_key_angle[idx] = abs(abs_key_angle[idx] - self.target_heading)
+        min_idx = abs_key_angle.index(min(abs_key_angle))
+        target_heading = angle[min_idx]
+
+        if target_heading not in self.key_angle:
+            second_key_angle = self.key_angle.copy()
+            for idx in range(len(second_key_angle)):
+                second_key_angle[idx] = abs(second_key_angle[idx] - self.target_heading)
+            second_min_idx = [idx for idx, value in enumerate(second_key_angle) if value == min(second_key_angle)]
+            # 최솟값을 가지는 index 배열
+            if len(second_min_idx) == 1:
+                self.final_key_angle = self.key_angle[second_min_idx[0]]
+            # 최솟값을 가지는 index가 2개라면 아래의 if문 작동
+            elif (abs(self.now_heading - self.key_angle[second_min_idx[0]]) 
+                  - abs(self.now_heading - self.key_angle[second_min_idx[1]]) < 0):
+                self.final_key_angle = self.key_angle[second_min_idx[0]]
+            else:
+                self.final_key_angle = self.key_angle[second_min_idx[1]]
+        else:
+            self.final_key_angle = target_heading
+        
     def navigate(self):
         key = Key.Request()
-        key = self.final_key_angle
+        key.degree = self.final_key_angle
 
-        # self.set_key_handler.call_async(key)
+        self.set_key_handler.call_async(key)
         # print(key)
 
 def main(args=None):

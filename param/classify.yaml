@@ -8,3 +8,6 @@
 
     # 안전 거리(x 1 meter)
     safety_distance : 30
+
+    # 각도 임계점
+    grouping_angle_threshold : 30
