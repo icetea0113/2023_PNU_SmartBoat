@@ -48,7 +48,7 @@ class MechashipClassifySub(Node):
         )
 
         self.obstacle_subscription = self.create_subscription(
-            ClassificationArray, "/obstacle", self.obstacle_listener_callback, qos_profile
+            ClassificationArray, "/Obstacle", self.obstacle_listener_callback, qos_profile
         )
         self.wall_subscription = self.create_subscription(
             ClassificationArray, "/Wall", self.wall_listener_callback, qos_profile
@@ -63,17 +63,17 @@ class MechashipClassifySub(Node):
     def wall_listener_callback(self, data):
         self.get_logger().info("wall cnt: %s" % (len(data.classifications)))
         self.wall = data
-
-    def obstacle_listener_callback(self, data):
-        self.get_logger().info("obstacle cnt: %s" % (len(data.classifications)))
-        self.obstacle = data
-
+        
         self.show_classification_array(self.obstacle, "obstacle", (100, 100), True)
         self.show_classification_array(self.wall, "wall", (100, 100), True)
 
         self.show_map((self.map_size, self.turn_degree, self.map_scale))
 
         cv2.waitKey(1)
+
+    def obstacle_listener_callback(self, data):
+        self.get_logger().info("obstacle cnt: %s" % (len(data.classifications)))
+        self.obstacle = data
 
     def show_classification_array(
         self,
@@ -91,7 +91,7 @@ class MechashipClassifySub(Node):
             (255, 255, 0),
         ]
 
-        height = int(3.5 * scale[0])
+        height = int(5 * scale[0])
         width = int(2 * math.pi * scale[1])
         empty_image = np.zeros((height, width, 3), np.uint8)  # (세로, 가로)
         for idx, classification in enumerate(classification_array.classifications):
@@ -100,6 +100,7 @@ class MechashipClassifySub(Node):
             else:
                 color = (255, 255, 255)
             for range, theta in zip(classification.ranges, classification.thetas):
+                print(int(range * scale[0]), int(theta * scale[1]))
                 empty_image[int(range * scale[0])][int(theta * scale[1])] = color
 
         cv2.imshow(title, np.flip(empty_image, axis=0))

@@ -175,6 +175,8 @@ class Classify(Node):
     def decision_group(self): #step c ~ step d
         self.get_logger().info("세분화 전 인식한 그룹의 갯수 : %s." % (len(self.group_1)))
         i = 0
+        wall_pub = ClassificationArray()
+        obstacle_pub = ClassificationArray()
         for group in self.group_1:
             temp_group = []
             j = 0
@@ -189,24 +191,36 @@ class Classify(Node):
                     
                 degree = math.degrees(abs(abs(math.atan((y2-y1)/(x2-x1))) - abs(math.atan((y3-y2)/(x3-x2)))))
                 print("{}번째 그룹, index = {}에서의 각도 : {}".format(i,index,degree))
-                if degree <= 20:
+                if degree <= 30:
                     temp_group.append(group[index])
                 elif (20 < degree or index == len(group)-1) and len(temp_group) > self.grouping_threshold:
                     distance = self.cosines(temp_group[0][0],temp_group[-1][0],temp_group[0][1]-temp_group[-1][1])
                     if distance >= 1:
                         print("벽 전체 거리: %s"%distance)
                         self.wall.append(temp_group.copy())
+                        for wall in temp_group :
+                            coords = Classification()
+                            coords.ranges.append(wall[0])
+                            coords.thetas.append(wall[1])
+                            wall_pub.classifications.append(coords)
                         temp_group.clear()
                     else :
                         print("장애물 전체 거리: %s"%distance)
                         self.obstacle.append(temp_group.copy())
+                        for obstacle in temp_group:
+                            coords = Classification()
+                            coords.ranges.append(obstacle[0])
+                            coords.thetas.append(obstacle[1])
+                            obstacle_pub.classifications.append(coords)
                         temp_group.clear()
                     index += 2
         
-        #------ 위 함수 수정 요함 (비정상) (검토날짜 : 2022_02_24(Fri) _ 16:28)
-        #------ 2023_02_25(SAT) _ 22:34 수정 완료 / 추후 재검토 예정
-        self.obstacle_publisher.publish(self.obstacle)
-        self.wall_publisher.publish(self.walls)
+        #------ 위 함수 수정 요함 (정상) (검토날짜 : 2022_02_27(Mon) _ 16:03)
+        # ||||||||||||||||||||||||||        !!!!!아래 사항 꼭 확인!!!!!     ||||||||||||||||||||||||||
+        #------ 벽과 장애물에 대한 구분을 약간 러프하게 잡을 필요 있음 -> 추후 수조가 완성된 후, 재검토 할 예정
+            
+        self.obstacle_publisher.publish(obstacle_pub)
+        self.wall_publisher.publish(wall_pub)
         self.get_logger().info("count of obstacle : %s. " % (len(self.obstacle)))
         self.get_logger().info("count of wall : %s." % (len(self.wall)))
                     
@@ -251,6 +265,7 @@ class Classify(Node):
                 expand_dist = self.safety_distance / math.cos(self.wall[idx][0][1] - min_wall[0][1])
                 if self.wall[idx][0][0] < expand_dist :
                     print("주변에 벽이 있어요!!")
+                    #추가적인 제어 코드 설정
 
     def detect_angle(self): #step f~g
         '''
