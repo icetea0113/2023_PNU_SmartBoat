@@ -101,6 +101,7 @@ class Classify(Node):
         
         # 다음 변수는 최종 서보모터로 입력을 넣어줄 키 각도이다.
         self.final_key_angle = 90
+        self.throttle_value = 50
         
         
     def listener_callback(self, data):
@@ -258,18 +259,39 @@ class Classify(Node):
                 self.key_angle = key_angle
     
     def expand_wall(self): # step h
+        # self.wall -> 벽들의 좌표들의 집합 [(wall1),(wall2),(wall3)...]
         if len(self.wall) > 0 :
-            min_wall = self.wall[0].copy()
+            # 벽까지의 최소거리 집합
+            min_wall_dist = []
+            min_wall_angle = []
             for wall in self.wall:
-                if min_wall[0] > wall[0]:
-                    min_wall = wall
+                rhos = [rho[0] for rho in wall]
+                min_rho = min(rhos)
+                min_wall_angle.append(wall[rhos.index(min_rho)][1])
+                min_wall_dist.append(min_rho)
+            #---------------------------------
+            if min(min_wall_dist) < self.safety_distance:
+                min_idx = min_wall_dist.index(min(min_wall_dist))
+                if min_wall_angle[min_idx] < 70:
+                    self.final_key_angle = 60
+                    self.get_logger().info("왼쪽에 벽이 있음!")
+                elif min_wall_angle[min_idx] > 110:
+                    self.final_key_angle = 120
+                    self.get_logger().info("오른쪽에 벽이 있음!")
+                
+        
+        # if len(self.wall) > 0 :
+        #     min_wall = self.wall[0].copy()
+        #     for wall in self.wall:
+        #         if min_wall[0] > wall[0]:
+        #             min_wall = wall
                     
-            for idx in range(len(self.wall)):
-                expand_dist = self.safety_distance / math.cos(self.wall[idx][0][1] - min_wall[0][1])
-                if self.wall[idx][0][0] < expand_dist :
-                    print("주변에 벽이 있어요!!")
-                    #추가적인 제어 코드 설정
-                    
+        #     for idx in range(len(self.wall)):
+        #         expand_dist = self.safety_distance / math.cos(self.wall[idx][0][1] - min_wall[0][1])
+        #         if self.wall[idx][0][0] < expand_dist :
+        #             print("주변에 벽이 있어요!!")
+        #             #추가적인 제어 코드 설정
+                
 
     def detect_angle(self): #step f~g
         '''

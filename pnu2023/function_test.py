@@ -1,7 +1,6 @@
 def main():
-    abs_key_angle, angle = [5 * angle for angle in range(1,37)]
-    abs_key_angle[20] -= 155
-
-    print(abs_key_angle)
-    print(angle)
+    wall_1 = [[(1,2),(3,4),(5,6)],[(7,8),(9,10)],[(11,12)]]
+    for wall in wall_1:
+        rhos = [rho for (rho,angle) in wall]
+        print(rhos)
 main()
