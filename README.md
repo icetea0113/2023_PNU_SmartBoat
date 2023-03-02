@@ -20,6 +20,8 @@ Lee Hee Geun
 3. Lee Hyun Bin  
 4. Park Yung In  
 
+### 모든 파일 다운로드 및 적용 바라며, src 폴더 내에 저장한 후, colcon build 명령어 꼭 입력 바랍니다. ##
+
 ### How to use IMU tools? ####
 1. Open the powershell(terminal)
 2. Enter "cb"
