@@ -1,6 +1,6 @@
 # 2023_PNU_SmartBoat
 
-2023년 부산대학교 교내 자율운항보트 경진대회에 참여를 위한 ROS 패키지 및 소스코드 등을 포함하고 있다.
+2023년 부산대학교 교내 자율운항보트 경진대회에 참여를 위한 ROS 패키지 및 소스코드 등을 포함하고 있다. 추후 대회 준비가 마무리 되어갈 때 쯤, 깃허브 Markdown file과 folder를 세분화 및 정리 할 예정이다.
 
 <!-- ```
 This project is licensed under the terms of the GNU General Public License v3.0.
