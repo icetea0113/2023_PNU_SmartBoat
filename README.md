@@ -20,7 +20,7 @@ Lee Hee Geun
 3. Lee Hyun Bin  
 4. Park Yung In  
 
-##### How to use IMU tools? ######
+### How to use IMU tools? ####
 1. open the powershell(terminal)
 2. enter "cb"
 3. select imu filter kalman or complementary
