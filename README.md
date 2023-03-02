@@ -27,7 +27,7 @@ Lee Hee Geun
 4-1. if you select kalman filter -> enter "ros2 launch imu_filter_madgwick imu_filter.launch.py"
 4-2. if you select complementary filter -> enter "ros2 launch imu_complementary_filter complementary_filter.launch.py"
 5. check ros2 topic list and /imu/data (not /imu/data_raw), then you can see orientation element(caution! this is quaternian coordinate system)
-
+6. (optional) If you want check result as cartesian(Euler) coordinate system, you have to use module which name is now_heading.py(~/pnu2023/pnu2023/now_heading.py)
 <!-- ## Documentation and Open Data
 ### Documents
 📋 [상세 개발 보고서](https://winterbloooom.github.io/autonomous%20vehicle/kaboat2022-dev-report/): 개발 기획 단계부터 알고리즘 설계 및 구현, 테스트 및 대회 적용 등 전반적 사항을 상세하게 기술하고 있음<br>
