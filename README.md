@@ -24,7 +24,8 @@ Lee Hee Geun
 1. Open the powershell(terminal)
 2. Enter "cb"
 3. Select imu filter kalman or complementary  
-4. If you select kalman filter -> enter "ros2 launch imu_filter_madgwick imu_filter.launch.py"  else if you select complementary filter -> enter "ros2 launch imu_complementary_filter complementary_filter.launch.py"
+4. If you select kalman filter -> enter "ros2 launch imu_filter_madgwick imu_filter.launch.py"  
+else if you select complementary filter -> enter "ros2 launch imu_complementary_filter complementary_filter.launch.py"
 5. Check ros2 topic list and /imu/data (not /imu/data_raw), then you can see orientation element(caution! this is quaternian coordinate system)
 6. (optional) If you want check result as cartesian(Euler) coordinate system, you have to use module which name is now_heading.py(~/pnu2023/pnu2023/now_heading.py)
 <!-- ## Documentation and Open Data
