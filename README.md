@@ -23,9 +23,9 @@ Lee Hee Geun
 ### How to use IMU tools? ####
 1. open the powershell(terminal)
 2. enter "cb"
-3. select imu filter kalman or complementary  
-4-1. if you select kalman filter -> enter "ros2 launch imu_filter_madgwick imu_filter.launch.py"  
-4-2. if you select complementary filter -> enter "ros2 launch imu_complementary_filter complementary_filter.launch.py"  
+3. select imu filter kalman or complementary
+4-1. if you select kalman filter -> enter "ros2 launch imu_filter_madgwick imu_filter.launch.py"
+4-2. if you select complementary filter -> enter "ros2 launch imu_complementary_filter complementary_filter.launch.py"
 5. check ros2 topic list and /imu/data (not /imu/data_raw), then you can see orientation element(caution! this is quaternian coordinate system)
 6. (optional) If you want check result as cartesian(Euler) coordinate system, you have to use module which name is now_heading.py(~/pnu2023/pnu2023/now_heading.py)
 <!-- ## Documentation and Open Data
