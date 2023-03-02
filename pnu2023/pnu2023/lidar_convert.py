@@ -6,7 +6,7 @@ from sensor_msgs.msg import LaserScan
 import math
 import numpy as np
 from numpy.polynomial import Polynomial
-from mechaship_interfaces.msg import Classification, ClassificationArray
+from mechaship_interfaces.msg import Classification, ClassificationArray, Heading
 from mechaship_interfaces.srv import Key, ThrottlePercentage, RGBColor
 
 '''
@@ -66,7 +66,7 @@ class Classify(Node):
         self.scan_subscription = self.create_subscription(
             LaserScan, "/scan", self.listener_callback, qos_profile
         )
-
+        
         self.create_timer(0.1, self.navigate)
 
         self.set_key_handler = self.create_client(Key, "/actuators/key/set")
@@ -96,7 +96,9 @@ class Classify(Node):
         1. 목표지점을 향한 각도 (GPS + IMU)
         2. 현재 선수 각도 (IMU)
         '''
-        self.now_heading = 0
+        self.now_heading = self.subscriptions(
+            Heading, "heading", self.listener_callback, qos_profile
+        )
         self.target_heading = 0
         
         # 다음 변수는 최종 서보모터로 입력을 넣어줄 키 각도이다.
@@ -305,6 +307,8 @@ class Classify(Node):
         min_idx = abs_key_angle.index(min(abs_key_angle))
         target_heading = angle[min_idx]
 
+        now_heading = self.now_heading.yaw ## <-- 체크할 것
+        
         if target_heading not in self.key_angle:
             second_key_angle = self.key_angle.copy()
             for idx in range(len(second_key_angle)):
@@ -314,8 +318,8 @@ class Classify(Node):
             if len(second_min_idx) == 1:
                 self.final_key_angle = self.key_angle[second_min_idx[0]]
             # 최솟값을 가지는 index가 2개라면 아래의 if문 작동
-            elif (abs(self.now_heading - self.key_angle[second_min_idx[0]]) 
-                  - abs(self.now_heading - self.key_angle[second_min_idx[1]]) < 0):
+            elif (abs(now_heading - self.key_angle[second_min_idx[0]]) 
+                  - abs(now_heading - self.key_angle[second_min_idx[1]]) < 0):
                 self.final_key_angle = self.key_angle[second_min_idx[0]]
             else:
                 self.final_key_angle = self.key_angle[second_min_idx[1]]

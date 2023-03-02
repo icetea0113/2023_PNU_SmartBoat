@@ -2,6 +2,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import MagneticField
 from sensor_msgs.msg import Imu
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from mechaship_interfaces.msg import Heading
 
 import math
 
@@ -12,6 +14,14 @@ class MagnetometerNode(Node):
         super().__init__('magnetometer_node')
         self.mag_sub = self.create_subscription(MagneticField, '/imu/data', self.mag_callback, 10)
         self.qua_sub = self.create_subscription(Imu, '/imu/data', self.qua_callback, 10)
+        
+        qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
+            history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+            depth=1,
+        )
+                
+        self.now_heading = self.create_publisher(Heading, 'heading', qos_profile)
         
         self.get_logger().info('Magnetometer node initialized')
         self.roll_x = 10000  # 값을 정상적으로 계산하는지 확인하기 위해 초기값을 10000으로 설정
@@ -25,7 +35,12 @@ class MagnetometerNode(Node):
         qw = msg.orientation.w
 
         (self.roll_x, self.pitch_y, self.yaw_z) = self.euler_from_quaternion(qx, qy, qz, qw)
+        
+        heading = Heading()
+        [heading.roll, heading.pitch, heading.yaw] = map(self.roll_x, self.pitch_y, self.yaw_z)
+        
         self.get_logger().info("roll : {}, pitch : {}, yaw: {}".format(self.roll_x, self.pitch_y, self.yaw_z))
+        
     def mag_callback(self, msg):
         x = msg.magnetic_field.x
         y = msg.magnetic_field.y

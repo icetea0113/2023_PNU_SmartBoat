@@ -40,6 +40,7 @@ set(msg_files
   "msg/ClassificationArray.msg"
   "msg/Detection.msg"
   "msg/DetectionArray.msg"
+  "msg/Heading.msg"
 )
 
 set(srv_files
