@@ -20,7 +20,14 @@ Lee Hee Geun
 3. Lee Hyun Bin  
 4. Park Yung In  
 
-### 모든 파일 다운로드 및 적용 바라며, src 폴더 내에 저장한 후, colcon build 명령어 꼭 입력 바랍니다. ##
+## 모든 파일 다운로드 및 적용 바라며, src 폴더 내에 저장한 후, colcon build 명령어 꼭 입력 바랍니다. ##
+Reason : 새로운 msg 파일을 생성하였습니다.
+New msg name : Heading.msg (헤딩 각을 계산하기 위한 3가지 각도, degree로 표현되어 있다.)
+File's path : ~/ros2_ws/src/pnu2023/mechaship_interface/msg
+This msg contents :
+float32 roll
+float32 pitch
+float32 yaw     the end.
 
 ### How to use IMU tools? ####
 1. Open the powershell(terminal)
