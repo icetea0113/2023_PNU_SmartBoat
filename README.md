@@ -31,6 +31,7 @@ float32 yaw
 (the end.)
 
 ### How to use IMU tools? ####
+--------------------------------
 1. Open the powershell(terminal)
 2. Enter "cb"
 3. Select imu filter kalman or complementary  
