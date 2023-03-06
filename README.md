@@ -27,7 +27,8 @@ File's path : ~/ros2_ws/src/pnu2023/mechaship_interface/msg
 This msg contents :  
 float32 roll  
 float32 pitch  
-float32 yaw     the end.
+float32 yaw  
+(the end.)
 
 ### How to use IMU tools? ####
 1. Open the powershell(terminal)
