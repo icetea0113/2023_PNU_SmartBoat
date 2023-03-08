@@ -9,16 +9,14 @@ from numpy.polynomial import Polynomial
 from mechaship_interfaces.msg import Classification, ClassificationArray, Heading
 from mechaship_interfaces.srv import Key, ThrottlePercentage, RGBColor
 
-'''
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-'''
-
 """
 Notes:
-    Lidar의 점을 Grouping하고 벽인지 부표인지 구분하는 함수로
+    Lidar의 점을 Grouping하고 벽인지 부표인지 구분하고 라이다를 통하여
+    목표 선수각을 계산하도록 하는 함수들로 이루어져있다.
+    
+    ** 현재 보완해야할 점:
+    1. key를 제어하는 부분을 autonomous.py (새로 만들 예정)에 옮기도록 한다.
+    2. 줄무늬 부표에 따라 제어를 할 수 있는 코드를 새로 만들도록 한다.
     
 """
 
@@ -307,7 +305,7 @@ class Classify(Node):
         min_idx = abs_key_angle.index(min(abs_key_angle))
         target_heading = angle[min_idx]
 
-        now_heading = self.now_heading.yaw ## <-- 체크할 것
+        now_heading = self.now_heading.yaw ## <-- 체크할 것 / degree of yaw 
         
         if target_heading not in self.key_angle:
             second_key_angle = self.key_angle.copy()
@@ -331,7 +329,7 @@ class Classify(Node):
         key.degree = self.final_key_angle
 
         self.set_key_handler.call_async(key)
-        # print(key)
+        self.get_logger().info("key의 각도 : {}".format(key.degree))
 
 def main(args=None):
     rclpy.init(args=args)
