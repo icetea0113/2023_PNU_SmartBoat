@@ -30,6 +30,7 @@ setup(
             'HeadingAngle = pnu2023.heading_mag:main',
             'mechaship_teleop_joystick = pnu2023.joystick:main',
             'mechaship_classify_sub_node = pnu2023.mechaship_classify_sub_node:main',
+            'autonomous = pnu2023.autonomous:main',
         ],
     },
 )

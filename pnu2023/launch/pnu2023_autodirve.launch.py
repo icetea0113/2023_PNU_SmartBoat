@@ -52,27 +52,27 @@ def generate_launch_description():
         parameters=[classify_params],
     )
 
-    # # navigation 노드
-    # mechaship_navigation_params = LaunchConfiguration(
-    #     "mechaship_navigation_params",
-    #     default=os.path.join(
-    #         get_package_share_directory("mechaship_example"),
-    #         "param",
-    #         "mechaship_navigation.yaml",
-    #     ),
-    # )
-    # mechaship_navigation_arg = DeclareLaunchArgument(
-    #     "mechaship_navigation_params",
-    #     default_value=mechaship_navigation_params,
-    # )
-    # mechaship_navigation = Node(
-    #     package="mechaship_example",
-    #     executable="mechaship_navigation_node",
-    #     name="mechaship_navigation_node",
-    #     output="screen",
-    #     emulate_tty=True,
-    #     parameters=[mechaship_navigation_params],
-    # )
+    # navigation 노드
+    mechaship_navigation_params = LaunchConfiguration(
+        "mechaship_navigation_params",
+        default=os.path.join(
+            get_package_share_directory("pnu2023"),
+            "param",
+            "classify.yaml",
+        ),
+    )
+    mechaship_navigation_arg = DeclareLaunchArgument(
+        "mechaship_navigation_params",
+        default_value=mechaship_navigation_params,
+    )
+    mechaship_navigation = Node(
+        package="pnu2023",
+        executable="autonomous",
+        name="autonomous",
+        output="screen",
+        emulate_tty=True,
+        parameters=[mechaship_navigation_params],
+    )
 
     return LaunchDescription(
         [
@@ -80,8 +80,8 @@ def generate_launch_description():
             # mechaship_detect,
             mechaship_classify_arg,
             mechaship_classify,
-            # mechaship_navigation_arg,
-            # mechaship_navigation,
+            mechaship_navigation_arg,
+            mechaship_navigation,
         ]
     )
     

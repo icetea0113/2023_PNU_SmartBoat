@@ -41,6 +41,7 @@ set(msg_files
   "msg/Detection.msg"
   "msg/DetectionArray.msg"
   "msg/Heading.msg"
+  "msg/Target.msg"
 )
 
 set(srv_files

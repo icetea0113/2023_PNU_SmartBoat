@@ -6,7 +6,7 @@ from sensor_msgs.msg import LaserScan
 import math
 import numpy as np
 from numpy.polynomial import Polynomial
-from mechaship_interfaces.msg import Classification, ClassificationArray, Heading
+from mechaship_interfaces.msg import Classification, ClassificationArray, Heading, Target
 from mechaship_interfaces.srv import Key, ThrottlePercentage, RGBColor
 
 """
@@ -16,7 +16,18 @@ Notes:
     
     ** 현재 보완해야할 점:
     1. key를 제어하는 부분을 autonomous.py (새로 만들 예정)에 옮기도록 한다.
-    2. 줄무늬 부표에 따라 제어를 할 수 있는 코드를 새로 만들도록 한다.
+        - lidar로 계산한 heading 각도를 msg로 publish
+        - 줄무늬 부표에 따라 제어를 할 수 있는 코드를 새로 만들도록 한다.
+        - 각도 계산은 어떻게 하지?
+            1) 화각을 사용해 부분적인 각도 계산?
+    ㄴ
+    순서도 변경)
+    1. 줄무늬 부표가 보이는가?
+        1) 두 개의 줄무늬 부표 사이로 이동하도록 하기.
+        2) if문을 2개 작성하여 각 줄무늬 부표에 따라 각도 삭제하기.
+    2-1) 줄무늬 부표가 보인다면 그 조건을 통해 만들어진 각도를 목표 각도로 설정
+    2-2) 줄무늬 부표가 보이지 않는다면, 목표지점을 향한 각도를 목표 각도로 설정
+    3. 설정한 목표각도를 최우선적으로 주행하도록 하나, 전방에 장애물이 있다면 그에 따라 주행 각도를 변경하도록 함.
     
 """
 
@@ -77,6 +88,9 @@ class Classify(Node):
         self.wall_publisher = self.create_publisher(
             ClassificationArray, "Wall", qos_profile
         )
+        self.lidar_target_publisher = self.create_publisher(
+            Target, "lidar_target", qos_profile 
+        )
 
         self.rhos = []
         self.thetas = []
@@ -94,9 +108,7 @@ class Classify(Node):
         1. 목표지점을 향한 각도 (GPS + IMU)
         2. 현재 선수 각도 (IMU)
         '''
-        self.now_heading = self.subscriptions(
-            Heading, "heading", self.listener_callback, qos_profile
-        )
+        
         self.target_heading = 0
         
         # 다음 변수는 최종 서보모터로 입력을 넣어줄 키 각도이다.
@@ -227,109 +239,106 @@ class Classify(Node):
         self.wall_publisher.publish(wall_pub)
         self.get_logger().info("count of obstacle : %s. " % (len(self.obstacle)))
         self.get_logger().info("count of wall : %s." % (len(self.wall)))
-                    
-    def expand_obstacle(self): #step e
-        if len(self.obstacle) > 0 :
-            for group in self.obstacle:
-                start_point_polar = group[0]
-                end_point_polar = group[-1]
+
+'''                 
+    # def expand_obstacle(self): #step e
+    #     if len(self.obstacle) > 0 :
+    #         for group in self.obstacle:
+    #             start_point_polar = group[0]
+    #             end_point_polar = group[-1]
                 
-                start_point_otho = self.trans_polar_to_ortho(group[0][0], group[0][1])
-                end_point_otho = self.trans_polar_to_ortho(group[-1][0], group[-1][1])
-                middle_point = [(start_point_otho[0]+end_point_otho[0])/2 , (start_point_otho[1]+end_point_otho[1])/2]
+    #             start_point_otho = self.trans_polar_to_ortho(group[0][0], group[0][1])
+    #             end_point_otho = self.trans_polar_to_ortho(group[-1][0], group[-1][1])
+    #             middle_point = [(start_point_otho[0]+end_point_otho[0])/2 , (start_point_otho[1]+end_point_otho[1])/2]
                 
-                dist_p2p = self.cosines(start_point_polar[0], end_point_polar[0], (end_point_polar[1]-start_point_polar[1]))
-                radius = dist_p2p/2.0 + self.safety_distance
-                p2p_angle = math.atan((end_point_otho[1]-start_point_otho[1])/(end_point_otho[0]-start_point_otho[0]))
+    #             dist_p2p = self.cosines(start_point_polar[0], end_point_polar[0], (end_point_polar[1]-start_point_polar[1]))
+    #             radius = dist_p2p/2.0 + self.safety_distance
+    #             p2p_angle = math.atan((end_point_otho[1]-start_point_otho[1])/(end_point_otho[0]-start_point_otho[0]))
                 
-                height = radius * math.sin(p2p_angle)
-                width = radius * math.cos(p2p_angle)
+    #             height = radius * math.sin(p2p_angle)
+    #             width = radius * math.cos(p2p_angle)
                 
-                expand_1 = (middle_point[0]+width, middle_point[1]+height)
-                expand_2 = (middle_point[0]-width, middle_point[1]-height)
-                expand_1_angle = math.degrees(math.atan(expand_1[1]/expand_1[0]))
-                expand_2_angle = math.degrees(math.atan(expand_2[1]/expand_2[0]))
+    #             expand_1 = (middle_point[0]+width, middle_point[1]+height)
+    #             expand_2 = (middle_point[0]-width, middle_point[1]-height)
+    #             expand_1_angle = math.degrees(math.atan(expand_1[1]/expand_1[0]))
+    #             expand_2_angle = math.degrees(math.atan(expand_2[1]/expand_2[0]))
                 
-                key_angle = self.key_angle.copy()
+    #             key_angle = self.key_angle.copy()
                 
-                for angle in self.key_angle:
-                    if min(expand_1_angle, expand_2_angle) < angle < max(expand_1_angle, expand_2_angle):
-                        key_angle.remove(angle)
+    #             for angle in self.key_angle:
+    #                 if min(expand_1_angle, expand_2_angle) < angle < max(expand_1_angle, expand_2_angle):
+    #                     key_angle.remove(angle)
                 
-                self.key_angle = key_angle
+    #             self.key_angle = key_angle
     
-    def expand_wall(self): # step h
-        # self.wall -> 벽들의 좌표들의 집합 [(wall1),(wall2),(wall3)...]
-        if len(self.wall) > 0 :
-            # 벽까지의 최소거리 집합
-            min_wall_dist = []
-            min_wall_angle = []
-            for wall in self.wall:
-                rhos = [rho[0] for rho in wall]
-                min_rho = min(rhos)
-                min_wall_angle.append(wall[rhos.index(min_rho)][1])
-                min_wall_dist.append(min_rho)
-            #---------------------------------
-            if min(min_wall_dist) < self.safety_distance:
-                min_idx = min_wall_dist.index(min(min_wall_dist))
-                if min_wall_angle[min_idx] < 70:
-                    self.final_key_angle = 60
-                    self.get_logger().info("왼쪽에 벽이 있음!")
-                elif min_wall_angle[min_idx] > 110:
-                    self.final_key_angle = 120
-                    self.get_logger().info("오른쪽에 벽이 있음!")
+    # def expand_wall(self): # step h
+    #     # self.wall -> 벽들의 좌표들의 집합 [(wall1),(wall2),(wall3)...]
+    #     if len(self.wall) > 0 :
+    #         # 벽까지의 최소거리 집합
+    #         min_wall_dist = []
+    #         min_wall_angle = []
+    #         for wall in self.wall:
+    #             rhos = [rho[0] for rho in wall]
+    #             min_rho = min(rhos)
+    #             min_wall_angle.append(wall[rhos.index(min_rho)][1])
+    #             min_wall_dist.append(min_rho)
+    #         #---------------------------------
+    #         if min(min_wall_dist) < self.safety_distance:
+    #             min_idx = min_wall_dist.index(min(min_wall_dist))
+    #             if min_wall_angle[min_idx] < 70:
+    #                 self.final_key_angle = 60
+    #                 self.get_logger().info("왼쪽에 벽이 있음!")
+    #             elif min_wall_angle[min_idx] > 110:
+    #                 self.final_key_angle = 120
+    #                 self.get_logger().info("오른쪽에 벽이 있음!")
                 
         
-        # if len(self.wall) > 0 :
-        #     min_wall = self.wall[0].copy()
-        #     for wall in self.wall:
-        #         if min_wall[0] > wall[0]:
-        #             min_wall = wall
+    #     # if len(self.wall) > 0 :
+    #     #     min_wall = self.wall[0].copy()
+    #     #     for wall in self.wall:
+    #     #         if min_wall[0] > wall[0]:
+    #     #             min_wall = wall
                     
-        #     for idx in range(len(self.wall)):
-        #         expand_dist = self.safety_distance / math.cos(self.wall[idx][0][1] - min_wall[0][1])
-        #         if self.wall[idx][0][0] < expand_dist :
-        #             print("주변에 벽이 있어요!!")
-        #             #추가적인 제어 코드 설정
+    #     #     for idx in range(len(self.wall)):
+    #     #         expand_dist = self.safety_distance / math.cos(self.wall[idx][0][1] - min_wall[0][1])
+    #     #         if self.wall[idx][0][0] < expand_dist :
+    #     #             print("주변에 벽이 있어요!!")
+    #     #             #추가적인 제어 코드 설정
                 
 
-    def detect_angle(self): #step f~g
-        '''
-        heading 목표 방향을 수신한 뒤, key_angle과 가장 가까운 각도로 주행하도록 함.
-        &&(And) 벽과의 최소거리가 0이 넘어야 주행이 가능함.
-        '''
-        abs_key_angle = [5 * angle for angle in range(1,37)]
-        angle = abs_key_angle.copy()
-        for idx in range(len(abs_key_angle)):
-            abs_key_angle[idx] = abs(abs_key_angle[idx] - self.target_heading)
-        min_idx = abs_key_angle.index(min(abs_key_angle))
-        target_heading = angle[min_idx]
+    # def detect_angle(self): #step f~g
+    #     '''
+    #     heading 목표 방향을 수신한 뒤, key_angle과 가장 가까운 각도로 주행하도록 함.
+    #     &&(And) 벽과의 최소거리가 0이 넘어야 주행이 가능함.
+    #     '''
+    #     abs_key_angle = [5 * angle for angle in range(1,37)]
+    #     angle = abs_key_angle.copy()
+    #     for idx in range(len(abs_key_angle)):
+    #         abs_key_angle[idx] = abs(abs_key_angle[idx] - self.target_heading)
+    #     min_idx = abs_key_angle.index(min(abs_key_angle))
+    #     target_heading = angle[min_idx]
 
-        now_heading = self.now_heading.yaw ## <-- 체크할 것 / degree of yaw 
+    #     now_heading = self.now_heading.yaw ## <-- 체크할 것 / degree of yaw 
         
-        if target_heading not in self.key_angle:
-            second_key_angle = self.key_angle.copy()
-            for idx in range(len(second_key_angle)):
-                second_key_angle[idx] = abs(second_key_angle[idx] - self.target_heading)
-            second_min_idx = [idx for idx, value in enumerate(second_key_angle) if value == min(second_key_angle)]
-            # 최솟값을 가지는 index 배열
-            if len(second_min_idx) == 1:
-                self.final_key_angle = self.key_angle[second_min_idx[0]]
-            # 최솟값을 가지는 index가 2개라면 아래의 if문 작동
-            elif (abs(now_heading - self.key_angle[second_min_idx[0]]) 
-                  - abs(now_heading - self.key_angle[second_min_idx[1]]) < 0):
-                self.final_key_angle = self.key_angle[second_min_idx[0]]
-            else:
-                self.final_key_angle = self.key_angle[second_min_idx[1]]
-        else:
-            self.final_key_angle = target_heading
+    #     if target_heading not in self.key_angle:
+    #         second_key_angle = self.key_angle.copy()
+    #         for idx in range(len(second_key_angle)):
+    #             second_key_angle[idx] = abs(second_key_angle[idx] - self.target_heading)
+    #         second_min_idx = [idx for idx, value in enumerate(second_key_angle) if value == min(second_key_angle)]
+    #         # 최솟값을 가지는 index 배열
+    #         if len(second_min_idx) == 1:
+    #             self.final_key_angle = self.key_angle[second_min_idx[0]]
+    #         # 최솟값을 가지는 index가 2개라면 아래의 if문 작동
+    #         elif (abs(now_heading - self.key_angle[second_min_idx[0]]) 
+    #               - abs(now_heading - self.key_angle[second_min_idx[1]]) < 0):
+    #             self.final_key_angle = self.key_angle[second_min_idx[0]]
+    #         else:
+    #             self.final_key_angle = self.key_angle[second_min_idx[1]]
+    #     else:
+    #         self.final_key_angle = target_heading
         
-    def navigate(self):
-        key = Key.Request()
-        key.degree = self.final_key_angle
+    #     self.lidar_target_publisher.publish(self.final_key_angle)
 
-        self.set_key_handler.call_async(key)
-        self.get_logger().info("key의 각도 : {}".format(key.degree))
 
 def main(args=None):
     rclpy.init(args=args)
