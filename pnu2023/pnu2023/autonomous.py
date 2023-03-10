@@ -6,7 +6,7 @@ from sensor_msgs.msg import LaserScan
 import math
 import numpy as np
 from numpy.polynomial import Polynomial
-from mechaship_interfaces.msg import Classification, ClassificationArray, Heading, Target
+from mechaship_interfaces.msg import Classification, ClassificationArray, Heading, Targeting
 from mechaship_interfaces.srv import Key, ThrottlePercentage, RGBColor
 
 """
@@ -19,7 +19,7 @@ Notes:
         - 줄무늬 부표에 따라 제어를 할 수 있는 코드를 새로 만들도록 한다.
         - 각도 계산은 어떻게 하지?
             1) 화각을 사용해 부분적인 각도 계산?
-    ㄴ
+
     순서도 변경)
     1. 줄무늬 부표가 보이는가?
         1) 두 개의 줄무늬 부표 사이로 이동하도록 하기.
@@ -27,7 +27,6 @@ Notes:
     2-1) 줄무늬 부표가 보인다면 그 조건을 통해 만들어진 각도를 목표 각도로 설정
     2-2) 줄무늬 부표가 보이지 않는다면, 목표지점을 향한 각도를 목표 각도로 설정
     3. 설정한 목표각도를 최우선적으로 주행하도록 하나, 전방에 장애물이 있다면 그에 따라 주행 각도를 변경하도록 함.
-    
 """
 
 class Autonomous(Node):
@@ -37,20 +36,14 @@ class Autonomous(Node):
             allow_undeclared_parameters=True,
             automatically_declare_parameters_from_overrides=True,
         )
-        self.get_logger().info("max_gap_in_group: %sm" % (self.max_gap_in_group))
-        self.get_logger().info("grouping_threshold: %s개" % (self.grouping_threshold))
-        self.get_logger().info("safety_distance: %sm" % (self.safety_distance))
+        self.get_logger().info("----- start Antonomous node -----")
         
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
             history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
             depth=1,
         )
-        
-        self.scan_subscription = self.create_subscription(
-            LaserScan, "/scan", self.listener_callback, qos_profile
-        )
-        
+
         self.obstacle_subscription = self.create_subscription(
             ClassificationArray, "/Obstacle", self.obstacle_listener_callback, qos_profile
         )
@@ -61,9 +54,6 @@ class Autonomous(Node):
             Heading, "heading", self.heading_listener_callback, qos_profile
         )
 
-        self.obstacle_subscription  # prevent unused variable warning
-        self.wall_subscription  # prevent unused variable warning
-
         self.obstacle = ClassificationArray()
         self.wall = ClassificationArray()
         
@@ -73,15 +63,8 @@ class Autonomous(Node):
         self.set_throttle_handler = self.create_client(
             ThrottlePercentage, "/actuators/throttle/set_percentage"
         )
-        
-
-        self.rhos = []
-        self.thetas = []
-        self.angle = 0
-        self.d_theta = 0
 
         # these list use for step a ~ step c and consist of (rho, angle)
-        self.group_1 = []
         self.obstacle = []
         self.wall = []
         self.key_angle = [5 * angle for angle in range(0,37)]
@@ -99,46 +82,6 @@ class Autonomous(Node):
         self.throttle_value = 50
         
         
-    def listener_callback(self, data):
-        
-        self.rhos = []
-        self.thetas = []
-        self.angle = 0
-        self.d_theta = 0
-        
-        #---------------------------------------------------#
-        self.angle = data.angle_min
-        self.d_theta = data.angle_increment
-        for scan_data in data.ranges:
-            if (scan_data != 0) and (not math.isinf(scan_data)) and (scan_data <= 4):
-                self.rhos.append(scan_data)
-                self.thetas.append(self.angle)
-            self.angle += self.d_theta
-
-    
-        # these list use for step a ~ step c and consist of (rho, angle)
-        self.group_1 = []
-        self.obstacle = []
-        self.wall = []
-        self.key_angle = [5 * angle for angle in range(0,37)]
-        
-        '''
-        다음 변수들은 subscription을 만들어야함.
-        1. 현재 선수 각도 (IMU)
-        2. 목표지점을 향한 각도 (GPS + IMU)
-        '''
-        self.now_heading = 0
-        self.target_heading = 0
-        
-        # 다음 변수는 최종 서보모터로 입력을 넣어줄 키 각도이다.
-        self.final_key_angle = 90
-        
-        self.grouping()
-        self.decision_group()
-        self.expand_obstacle()
-        self.expand_wall()
-        self.detect_angle()
-    
     def wall_listener_callback(self, data):
         rho = data.classifications[0]
         theta = data.classifications[1]
@@ -154,6 +97,10 @@ class Autonomous(Node):
     def heading_listener_callback(self, data):
         # Heading -> [pitch, roll, yaw]
         self.now_heading = data.yaw
+        
+        self.expand_obstacle()
+        self.expand_wall()
+        self.detect_angle()
                     
     def expand_obstacle(self): #step e
         if len(self.obstacle) > 0 :
@@ -205,6 +152,10 @@ class Autonomous(Node):
                 elif min_wall_angle[min_idx] > 110:
                     self.final_key_angle = 120
                     self.get_logger().info("오른쪽에 벽이 있음!")
+                else : 
+                    self.final_key_angle = 0
+                    self.throttle_value = 0
+                    self.get_logger().info("정면에 벽이 있음!")
                 
         
         # if len(self.wall) > 0 :
@@ -219,7 +170,6 @@ class Autonomous(Node):
         #             print("주변에 벽이 있어요!!")
         #             #추가적인 제어 코드 설정
                 
-
     def detect_angle(self): #step f~g
         '''
         heading 목표 방향을 수신한 뒤, key_angle과 가장 가까운 각도로 주행하도록 함.
@@ -252,6 +202,9 @@ class Autonomous(Node):
             self.final_key_angle = target_heading
         
         self.lidar_target_publisher.publish(self.final_key_angle)
+    
+    def navigate(self):
+        pass
 
 def main(args=None):
     rclpy.init(args=args)

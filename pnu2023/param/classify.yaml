@@ -10,4 +10,4 @@
     safety_distance : 30
 
     # 각도 임계점
-    grouping_angle_threshold : 30
+    grouping_angle_threshold : 30.0

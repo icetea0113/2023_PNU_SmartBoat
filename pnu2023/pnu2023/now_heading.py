@@ -37,40 +37,9 @@ class MagnetometerNode(Node):
         (self.roll_x, self.pitch_y, self.yaw_z) = self.euler_from_quaternion(qx, qy, qz, qw)
         
         heading = Heading()
-        [heading.roll, heading.pitch, heading.yaw] = map(self.roll_x, self.pitch_y, self.yaw_z)
+        [heading.roll, heading.pitch, heading.yaw] = [self.roll_x, self.pitch_y, self.yaw_z]
         
         self.get_logger().info("roll : {}, pitch : {}, yaw: {}".format(self.roll_x, self.pitch_y, self.yaw_z))
-        
-    def mag_callback(self, msg):
-        x = msg.magnetic_field.x
-        y = msg.magnetic_field.y
-
-        # 지자기 센서 값으로부터 각도를 계산합니다.
-        angle = math.atan2(y, x)
-        angle_degrees = math.degrees(angle)
-
-        # 계산된 각도를 동서남북 및 북서, 북동, 남서, 남동으로 변환합니다.
-        if angle_degrees < 0:
-            angle_degrees += 360
-
-        if 22.5 <= angle_degrees < 67.5:
-            direction = 'NE'
-        elif 67.5 <= angle_degrees < 112.5:
-            direction = 'E'
-        elif 112.5 <= angle_degrees < 157.5:
-            direction = 'SE'
-        elif 157.5 <= angle_degrees < 202.5:
-            direction = 'S'
-        elif 202.5 <= angle_degrees < 247.5:
-            direction = 'SW'
-        elif 247.5 <= angle_degrees < 292.5:
-            direction = 'W'
-        elif 292.5 <= angle_degrees < 337.5:
-            direction = 'NW'
-        else:
-            direction = 'N'
-
-        self.get_logger().info('Direction: %s', direction)
 
     def euler_from_quaternion(self, qx, qy, qz, qw):
         t0 = +2.0 * (qw * qx + qy * qz)

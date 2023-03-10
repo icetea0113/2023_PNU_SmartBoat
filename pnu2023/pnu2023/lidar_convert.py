@@ -6,7 +6,7 @@ from sensor_msgs.msg import LaserScan
 import math
 import numpy as np
 from numpy.polynomial import Polynomial
-from mechaship_interfaces.msg import Classification, ClassificationArray, Heading, Target
+from mechaship_interfaces.msg import Classification, ClassificationArray, Heading, Targeting
 from mechaship_interfaces.srv import Key, ThrottlePercentage, RGBColor
 
 """
@@ -20,7 +20,7 @@ Notes:
         - 줄무늬 부표에 따라 제어를 할 수 있는 코드를 새로 만들도록 한다.
         - 각도 계산은 어떻게 하지?
             1) 화각을 사용해 부분적인 각도 계산?
-    ㄴ
+
     순서도 변경)
     1. 줄무늬 부표가 보이는가?
         1) 두 개의 줄무늬 부표 사이로 이동하도록 하기.
@@ -28,7 +28,6 @@ Notes:
     2-1) 줄무늬 부표가 보인다면 그 조건을 통해 만들어진 각도를 목표 각도로 설정
     2-2) 줄무늬 부표가 보이지 않는다면, 목표지점을 향한 각도를 목표 각도로 설정
     3. 설정한 목표각도를 최우선적으로 주행하도록 하나, 전방에 장애물이 있다면 그에 따라 주행 각도를 변경하도록 함.
-    
 """
 
 class Classify(Node):
@@ -38,6 +37,7 @@ class Classify(Node):
             allow_undeclared_parameters=True,
             automatically_declare_parameters_from_overrides=True,
         )
+        self.get_logger().info("----- start Classify node -----")
         self.grouping_threshold = (
             self.get_parameter_or(
                 "grouping_threshold",
@@ -59,9 +59,10 @@ class Classify(Node):
         self.grouping_angle_threshold = (
             self.get_parameter_or(
                 "grouping_angle_threshold",
-                Parameter("grouping_angle_threshold", Parameter.Type.DOUBLE, 30),
+                Parameter("grouping_angle_threshold", Parameter.Type.DOUBLE, 30.0),
             ).get_parameter_value().double_value
         )
+        self.get_logger().info("----- start Classify node -----")
         self.get_logger().info("max_gap_in_group: %sm" % (self.max_gap_in_group))
         self.get_logger().info("grouping_threshold: %s개" % (self.grouping_threshold))
         self.get_logger().info("safety_distance: %sm" % (self.safety_distance))
@@ -75,8 +76,6 @@ class Classify(Node):
         self.scan_subscription = self.create_subscription(
             LaserScan, "/scan", self.listener_callback, qos_profile
         )
-        
-        self.create_timer(0.1, self.navigate)
 
         self.set_key_handler = self.create_client(Key, "/actuators/key/set")
         self.set_throttle_handler = self.create_client(
@@ -89,7 +88,7 @@ class Classify(Node):
             ClassificationArray, "Wall", qos_profile
         )
         self.lidar_target_publisher = self.create_publisher(
-            Target, "lidar_target", qos_profile 
+            Targeting, "lidar_target", qos_profile 
         )
 
         self.rhos = []
@@ -152,9 +151,7 @@ class Classify(Node):
         
         self.grouping()
         self.decision_group()
-        self.expand_obstacle()
-        self.expand_wall()
-        self.detect_angle()
+ 
     
     def cosines(self,a,b,theta = -1):
         if theta == -1 :
